@@ -1,0 +1,37 @@
+# ---- 依赖与构建产物 ----
+node_modules/
+# main.js 通过 GitHub Release 分发给 BRAT，不入库
+main.js
+*.js.map
+dist/
+build/
+
+# ---- 隐私：插件运行时数据 ----
+# Obsidian 将插件设置保存在 data.json，可能含路径、笔记名、token 等
+data.json
+
+# ---- 隐私：本地测试 Vault / 真实笔记 ----
+# 调试用的 Vault 或笔记样本一律放在这些目录中
+test-vault/
+vault/
+.obsidian/
+*.local.md
+private/
+
+# ---- 隐私：密钥与本地配置 ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.local.json
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# ---- AI 助手本地配置 ----
+.claude/settings.local.json
+CLAUDE.local.md
