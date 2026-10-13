@@ -1,11 +1,21 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import type MyMobilePlugin from "./main";
+import { FileSuggestModal } from "./ui/fileSuggestModal";
+import { TagSelectModal } from "./ui/tagSelectModal";
 
 export interface MyMobileSettings {
 	projectTodoSeparator: boolean;
 	projectTodoCssClass: string;
 	strikethroughDim: boolean;
 	tasksClean: boolean;
+	quickAddEnabled: boolean;
+	/** 显示悬浮“添加任务”按钮的笔记路径 */
+	quickAddNotes: string[];
+	/** 快速添加的任务写入的笔记路径 */
+	quickAddTargetPath: string;
+	quickAddTagPicker: boolean;
+	commonTags: string[];
+	saveNewTagsToCommon: boolean;
 }
 
 export const DEFAULT_SETTINGS: MyMobileSettings = {
@@ -13,6 +23,12 @@ export const DEFAULT_SETTINGS: MyMobileSettings = {
 	projectTodoCssClass: "project-todo",
 	strikethroughDim: true,
 	tasksClean: true,
+	quickAddEnabled: true,
+	quickAddNotes: [],
+	quickAddTargetPath: "Inbox/Tasks Inbox.md",
+	quickAddTagPicker: true,
+	commonTags: [],
+	saveNewTagsToCommon: true,
 };
 
 export class MyMobileSettingTab extends PluginSettingTab {
@@ -69,6 +85,100 @@ export class MyMobileSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(this.plugin.settings.tasksClean).onChange(async (v) => {
 					this.plugin.settings.tasksClean = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		this.displayQuickAdd(containerEl);
+	}
+
+	private displayQuickAdd(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+
+		new Setting(containerEl).setName("快速添加任务").setHeading();
+
+		new Setting(containerEl)
+			.setName("启用悬浮按钮")
+			.setDesc("在下方指定的笔记右下角显示“+”按钮，点击后打开 Tasks 新建任务弹窗。也可使用命令「快速添加任务」")
+			.addToggle((t) =>
+				t.setValue(s.quickAddEnabled).onChange(async (v) => {
+					s.quickAddEnabled = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("显示按钮的笔记")
+			.setDesc(s.quickAddNotes.length === 0 ? "尚未添加笔记" : "")
+			.addButton((b) =>
+				b.setButtonText("添加笔记").onClick(() => {
+					new FileSuggestModal(this.app, async (file) => {
+						if (!s.quickAddNotes.includes(file.path)) s.quickAddNotes.push(file.path);
+						await this.plugin.saveSettings();
+						this.display();
+					}).open();
+				})
+			);
+		for (const path of s.quickAddNotes) {
+			new Setting(containerEl)
+				.setDesc(path)
+				.setClass("mmo-setting-indent")
+				.addExtraButton((b) =>
+					b.setIcon("x").setTooltip("移除").onClick(async () => {
+						s.quickAddNotes = s.quickAddNotes.filter((p) => p !== path);
+						await this.plugin.saveSettings();
+						this.display();
+					})
+				);
+		}
+
+		new Setting(containerEl)
+			.setName("任务存储笔记")
+			.setDesc("新任务追加到这篇笔记末尾（不存在时自动创建）。建议使用单独的笔记，不要设为汇总笔记本身，以免与 Tasks 查询结果重复")
+			.addText((t) =>
+				t
+					.setPlaceholder(DEFAULT_SETTINGS.quickAddTargetPath)
+					.setValue(s.quickAddTargetPath)
+					.onChange(async (v) => {
+						s.quickAddTargetPath = v.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("添加后选择标签")
+			.setDesc("Tasks 弹窗确认后，再弹出标签选择")
+			.addToggle((t) =>
+				t.setValue(s.quickAddTagPicker).onChange(async (v) => {
+					s.quickAddTagPicker = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("常用标签")
+			.setDesc("添加任务时只从这些标签中选择。点击「管理」搜索 Vault 中的全部标签并多选")
+			.addButton((b) =>
+				b.setButtonText("管理").onClick(() => {
+					new TagSelectModal(this.app, s.commonTags, async (tags) => {
+						s.commonTags = tags;
+						await this.plugin.saveSettings();
+						this.display();
+					}).open();
+				})
+			);
+		const tagsEl = containerEl.createDiv({ cls: "mmo-setting-tags" });
+		if (s.commonTags.length === 0) {
+			tagsEl.createSpan({ cls: "mmo-tag-empty", text: "尚未设置常用标签" });
+		}
+		for (const tag of s.commonTags) tagsEl.createSpan({ cls: "mmo-tag-chip", text: tag });
+
+		new Setting(containerEl)
+			.setName("新标签保存为常用")
+			.setDesc("添加任务时手动输入的新标签，默认同时加入常用标签（弹窗内也可临时切换）")
+			.addToggle((t) =>
+				t.setValue(s.saveNewTagsToCommon).onChange(async (v) => {
+					s.saveNewTagsToCommon = v;
 					await this.plugin.saveSettings();
 				})
 			);
