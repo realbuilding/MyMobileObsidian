@@ -134,16 +134,19 @@ export class MyMobileSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("任务存储笔记")
-			.setDesc("新任务追加到这篇笔记末尾（不存在时自动创建）。建议使用单独的笔记，不要设为汇总笔记本身，以免与 Tasks 查询结果重复")
-			.addText((t) =>
-				t
-					.setPlaceholder(DEFAULT_SETTINGS.quickAddTargetPath)
-					.setValue(s.quickAddTargetPath)
-					.onChange(async (v) => {
-						s.quickAddTargetPath = v.trim();
+			.setDesc("新任务追加到这篇笔记末尾。建议使用单独的笔记，不要设为汇总笔记本身，以免与 Tasks 查询结果重复")
+			.addButton((b) =>
+				b.setButtonText("选择笔记").onClick(() => {
+					new FileSuggestModal(this.app, async (file) => {
+						s.quickAddTargetPath = file.path;
 						await this.plugin.saveSettings();
-					})
+						this.display();
+					}).open();
+				})
 			);
+		new Setting(containerEl)
+			.setDesc(s.quickAddTargetPath || DEFAULT_SETTINGS.quickAddTargetPath)
+			.setClass("mmo-setting-indent");
 
 		new Setting(containerEl)
 			.setName("添加后选择标签")
