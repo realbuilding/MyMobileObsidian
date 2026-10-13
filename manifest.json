@@ -1,7 +1,7 @@
 {
   "id": "my-mobile-obsidian",
   "name": "MyMobileObsidian",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "minAppVersion": "1.4.0",
   "description": "Personal-use plugin for mobile Obsidian. Not intended for general use.",
   "author": "rico",

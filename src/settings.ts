@@ -5,12 +5,14 @@ export interface MyMobileSettings {
 	projectTodoSeparator: boolean;
 	projectTodoCssClass: string;
 	strikethroughDim: boolean;
+	tasksClean: boolean;
 }
 
 export const DEFAULT_SETTINGS: MyMobileSettings = {
 	projectTodoSeparator: true,
 	projectTodoCssClass: "project-todo",
 	strikethroughDim: true,
+	tasksClean: true,
 };
 
 export class MyMobileSettingTab extends PluginSettingTab {
@@ -55,6 +57,18 @@ export class MyMobileSettingTab extends PluginSettingTab {
 			.addToggle((t) =>
 				t.setValue(this.plugin.settings.strikethroughDim).onChange(async (v) => {
 					this.plugin.settings.strikethroughDim = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl).setName("Tasks 查询样式").setHeading();
+
+		new Setting(containerEl)
+			.setName("启用")
+			.setDesc("优化 Tasks 插件查询结果的显示：截止日期紧急度高亮、日期 badge、优先级复选框底色、分组标题")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.tasksClean).onChange(async (v) => {
+					this.plugin.settings.tasksClean = v;
 					await this.plugin.saveSettings();
 				})
 			);
