@@ -1,6 +1,8 @@
 import { Plugin } from "obsidian";
 import { DEFAULT_SETTINGS, MyMobileSettings, MyMobileSettingTab } from "./settings";
-import { applyProjectTodoSeparator, removeProjectTodoSeparator } from "./features/projectTodoSeparator";
+import { setStyle } from "./features/styleInjector";
+import { PROJECT_TODO_SEPARATOR_ID, projectTodoSeparatorCss } from "./features/projectTodoSeparator";
+import { STRIKETHROUGH_DIM_ID, STRIKETHROUGH_DIM_CSS } from "./features/strikethroughDim";
 
 export default class MyMobilePlugin extends Plugin {
 	settings: MyMobileSettings = DEFAULT_SETTINGS;
@@ -12,7 +14,8 @@ export default class MyMobilePlugin extends Plugin {
 	}
 
 	onunload(): void {
-		removeProjectTodoSeparator();
+		setStyle(PROJECT_TODO_SEPARATOR_ID, null);
+		setStyle(STRIKETHROUGH_DIM_ID, null);
 	}
 
 	async loadSettings(): Promise<void> {
@@ -25,7 +28,13 @@ export default class MyMobilePlugin extends Plugin {
 	}
 
 	private applyFeatures(): void {
-		const { projectTodoSeparator, projectTodoCssClass } = this.settings;
-		applyProjectTodoSeparator(projectTodoSeparator, projectTodoCssClass);
+		const s = this.settings;
+		const cssClass = s.projectTodoCssClass.trim();
+
+		setStyle(
+			PROJECT_TODO_SEPARATOR_ID,
+			s.projectTodoSeparator && cssClass ? projectTodoSeparatorCss(cssClass) : null
+		);
+		setStyle(STRIKETHROUGH_DIM_ID, s.strikethroughDim ? STRIKETHROUGH_DIM_CSS : null);
 	}
 }

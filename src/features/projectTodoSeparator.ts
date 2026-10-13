@@ -3,9 +3,9 @@
    添加上边框作为项目分隔线，替代容易被折叠影响的 --- 分隔符
 */
 
-const STYLE_ID = "mmo-project-todo-separator";
+export const PROJECT_TODO_SEPARATOR_ID = "mmo-project-todo-separator";
 
-function buildCss(cssClass: string): string {
+export function projectTodoSeparatorCss(cssClass: string): string {
 	const cls = `.${CSS.escape(cssClass)}`;
 	return `
 /* 阅读模式 */
@@ -29,20 +29,4 @@ ${cls} .cm-line.HyperMD-header-2 {
 	margin-top: 1em;
 }
 `;
-}
-
-/** 按当前设置注入或移除样式；cssClass 为空时视为关闭 */
-export function applyProjectTodoSeparator(enabled: boolean, cssClass: string): void {
-	removeProjectTodoSeparator();
-	const name = cssClass.trim();
-	if (!enabled || !name) return;
-
-	const el = document.createElement("style");
-	el.id = STYLE_ID;
-	el.textContent = buildCss(name);
-	document.head.appendChild(el);
-}
-
-export function removeProjectTodoSeparator(): void {
-	document.getElementById(STYLE_ID)?.remove();
 }

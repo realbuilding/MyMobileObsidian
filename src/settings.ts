@@ -4,11 +4,13 @@ import type MyMobilePlugin from "./main";
 export interface MyMobileSettings {
 	projectTodoSeparator: boolean;
 	projectTodoCssClass: string;
+	strikethroughDim: boolean;
 }
 
 export const DEFAULT_SETTINGS: MyMobileSettings = {
 	projectTodoSeparator: true,
 	projectTodoCssClass: "project-todo",
+	strikethroughDim: true,
 };
 
 export class MyMobileSettingTab extends PluginSettingTab {
@@ -43,6 +45,18 @@ export class MyMobileSettingTab extends PluginSettingTab {
 						this.plugin.settings.projectTodoCssClass = v.trim();
 						await this.plugin.saveSettings();
 					})
+			);
+
+		new Setting(containerEl).setName("删除线").setHeading();
+
+		new Setting(containerEl)
+			.setName("调淡删除线文字")
+			.setDesc("降低删除线文字及删除线本身的颜色对比度")
+			.addToggle((t) =>
+				t.setValue(this.plugin.settings.strikethroughDim).onChange(async (v) => {
+					this.plugin.settings.strikethroughDim = v;
+					await this.plugin.saveSettings();
+				})
 			);
 	}
 }
