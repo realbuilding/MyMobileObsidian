@@ -1,9 +1,11 @@
 # 推送版本 tag（如 0.1.0）时构建并发布 Release，供 BRAT 拉取
+# 也可在 Actions 页面手动运行：按 manifest.json 中的版本号创建 tag 和 Release
 name: Release
 
 on:
   push:
     tags: ["*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,6 +20,15 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "name=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=$(node -p "require('./manifest.json').version")" >> "$GITHUB_OUTPUT"
+          fi
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" main.js manifest.json --title "$GITHUB_REF_NAME" --generate-notes
+          TAG: ${{ steps.tag.outputs.name }}
+        run: gh release create "$TAG" main.js manifest.json --target "$GITHUB_SHA" --title "$TAG" --generate-notes
