@@ -1,5 +1,5 @@
 import { App } from "obsidian";
-import { normalizeTag } from "../utils/tags";
+import { normalizeTag, tagLabel } from "../utils/tags";
 import { TagSelectModal } from "./tagSelectModal";
 
 export interface TagPickResult {
@@ -19,7 +19,16 @@ export class TagField {
 	private saveNewToCommon: boolean;
 	private chipsEl: HTMLElement;
 
-	constructor(private app: App, parent: HTMLElement, commonTags: string[], saveNewToCommon: boolean) {
+	/**
+	 * @param tagPrefix 全局过滤器的标签名（如 task）；新标签自动补成 #task/xxx，显示时省略前缀
+	 */
+	constructor(
+		private app: App,
+		parent: HTMLElement,
+		commonTags: string[],
+		saveNewToCommon: boolean,
+		private tagPrefix: string | null = null
+	) {
 		this.options = [...commonTags];
 		this.saveNewToCommon = saveNewToCommon;
 
@@ -29,11 +38,11 @@ export class TagField {
 		const addRow = parent.createDiv({ cls: "mmo-tag-add-row" });
 		const input = addRow.createEl("input", {
 			type: "text",
-			attr: { placeholder: "新标签，回车添加" },
+			attr: { placeholder: tagPrefix ? `新标签（自动加 #${tagPrefix}/ 前缀）` : "新标签，回车添加" },
 		});
 		const addBtn = addRow.createEl("button", { text: "添加" });
 		const add = () => {
-			const tag = normalizeTag(input.value);
+			const tag = normalizeTag(input.value, this.tagPrefix);
 			input.value = "";
 			if (!tag) return;
 			if (!this.options.includes(tag)) {
@@ -89,7 +98,11 @@ export class TagField {
 			return;
 		}
 		for (const tag of this.options) {
-			const chip = this.chipsEl.createEl("button", { cls: "mmo-chip", text: tag });
+			const chip = this.chipsEl.createEl("button", {
+				cls: "mmo-chip",
+				text: tagLabel(tag, this.tagPrefix),
+				attr: { title: tag },
+			});
 			chip.toggleClass("is-selected", this.selected.has(tag));
 			chip.addEventListener("click", () => {
 				if (this.selected.has(tag)) this.selected.delete(tag);

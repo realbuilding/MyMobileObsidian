@@ -88,6 +88,8 @@ export interface TaskCreateOptions {
 	commonTags: string[];
 	saveNewToCommon: boolean;
 	addCreatedDate: boolean;
+	/** 全局过滤器的标签名，见 TagField */
+	tagPrefix: string | null;
 	onSubmit: (r: TaskCreateResult) => Promise<void>;
 	/** 切换到 Tasks 原生面板 */
 	onUseTasksPanel: () => void;
@@ -131,7 +133,7 @@ export class TaskCreateModal extends Modal {
 
 		// 标签
 		this.section("标签");
-		const tagField = new TagField(this.app, contentEl, this.opts.commonTags, this.opts.saveNewToCommon);
+		const tagField = new TagField(this.app, contentEl, this.opts.commonTags, this.opts.saveNewToCommon, this.opts.tagPrefix);
 
 		// 更多
 		const more = contentEl.createEl("details", { cls: "mmo-more" });

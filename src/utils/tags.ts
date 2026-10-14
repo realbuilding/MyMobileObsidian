@@ -5,11 +5,26 @@ export interface TagCount {
 	count: number;
 }
 
-/** 规范化用户输入的标签：去掉首尾空白和前导 #，空白替换为 -，返回带 # 的形式；无效时返回 null */
-export function normalizeTag(input: string): string | null {
-	const body = input.trim().replace(/^#+/, "").replace(/\s+/g, "-");
+/** 全局过滤器是标签（如 #task）时返回不带 # 的名称，否则返回 null */
+export function tagFilterName(globalFilter: string): string | null {
+	const gf = globalFilter.trim();
+	return /^#[^\s#]+$/.test(gf) ? gf.slice(1) : null;
+}
+
+/**
+ * 规范化用户输入的标签：去掉首尾空白和前导 #，空白替换为 -，返回带 # 的形式；无效时返回 null。
+ * 传入 prefix（全局过滤器标签名）时，自动补成 #prefix/xxx 的嵌套标签
+ */
+export function normalizeTag(input: string, prefix: string | null = null): string | null {
+	let body = input.trim().replace(/^#+/, "").replace(/\s+/g, "-");
 	if (!body) return null;
+	if (prefix && body !== prefix && !body.startsWith(`${prefix}/`)) body = `${prefix}/${body}`;
 	return `#${body}`;
+}
+
+/** 标签的显示名：属于全局过滤器的嵌套标签只显示二级名称 */
+export function tagLabel(tag: string, prefix: string | null): string {
+	return prefix && tag.startsWith(`#${prefix}/`) ? tag.slice(prefix.length + 2) : tag;
 }
 
 /** 统计 Vault 中所有标签及出现的笔记数，按数量降序 */

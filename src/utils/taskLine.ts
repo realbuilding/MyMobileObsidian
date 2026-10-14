@@ -42,12 +42,13 @@ export function buildTaskLine(f: TaskFields, fmt: TasksFormat): string {
 	const desc = f.description.replace(/\s+/g, " ").trim();
 	const parts: string[] = ["- [ ]"];
 
-	const gf = fmt.globalFilter.trim();
-	if (gf && !desc.split(" ").includes(gf)) parts.push(gf);
-	parts.push(desc);
-
 	const existing = new Set(desc.match(/#[^\s#]+/g) ?? []);
-	for (const t of f.tags) if (t !== gf && !existing.has(t)) parts.push(t);
+	const tags = f.tags.filter((t) => !existing.has(t));
+
+	// Tasks 按“包含”匹配全局过滤器，#task/xxx 这类嵌套标签已满足，只在都不包含时补上
+	const gf = fmt.globalFilter.trim();
+	if (gf && ![desc, ...tags].some((x) => x.includes(gf))) parts.push(gf);
+	parts.push(desc, ...tags);
 
 	const recurrence = f.recurrence?.trim();
 	if (fmt.dataview) {

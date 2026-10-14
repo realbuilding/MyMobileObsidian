@@ -10,7 +10,7 @@ import { TagPickerModal } from "../ui/tagPickerModal";
 import type { TagPickResult } from "../ui/tagField";
 import { TaskCreateModal } from "../ui/taskCreateModal";
 import { buildTaskLine, readTasksFormat } from "../utils/taskLine";
-import { insertTagsIntoTaskLine } from "../utils/tags";
+import { insertTagsIntoTaskLine, tagFilterName } from "../utils/tags";
 
 export const QUICK_ADD_TASK_ID = "mmo-quick-add-task";
 
@@ -297,18 +297,15 @@ export async function quickAddTask(plugin: MyMobilePlugin): Promise<void> {
 	}
 
 	const s = plugin.settings;
+	const { globalFilter, dataview } = await resolveTasksFormat(plugin);
 	new TaskCreateModal(plugin.app, {
 		commonTags: s.commonTags,
 		saveNewToCommon: s.saveNewTagsToCommon,
 		addCreatedDate: s.quickAddCreatedDate,
+		tagPrefix: tagFilterName(globalFilter),
 		onUseTasksPanel: () => void quickAddViaTasks(plugin),
 		onSubmit: async ({ fields, tagResult }) => {
-			const auto = await readTasksFormat(plugin.app);
-			const globalFilter = s.tasksGlobalFilter.trim() || auto?.globalFilter || "";
-			const line = buildTaskLine(
-				{ ...fields, tags: tagResult.tags },
-				{ globalFilter, dataview: auto?.dataview ?? false }
-			);
+			const line = buildTaskLine({ ...fields, tags: tagResult.tags }, { globalFilter, dataview });
 			await saveTagResult(plugin, tagResult);
 			await writeTaskLine(plugin, line);
 		},
@@ -328,11 +325,26 @@ async function quickAddViaTasks(plugin: MyMobilePlugin): Promise<void> {
 
 	const s = plugin.settings;
 	if (s.quickAddTagPicker) {
-		const result = await new TagPickerModal(plugin.app, s.commonTags, s.saveNewTagsToCommon).pick();
+		const { globalFilter } = await resolveTasksFormat(plugin);
+		const result = await new TagPickerModal(
+			plugin.app,
+			s.commonTags,
+			s.saveNewTagsToCommon,
+			tagFilterName(globalFilter)
+		).pick();
 		line = insertTagsIntoTaskLine(line, result.tags);
 		await saveTagResult(plugin, result);
 	}
 	await writeTaskLine(plugin, line);
+}
+
+/** 全局过滤器优先用插件设置中手动填写的值，否则读取 Tasks 设置 */
+async function resolveTasksFormat(plugin: MyMobilePlugin): Promise<{ globalFilter: string; dataview: boolean }> {
+	const auto = await readTasksFormat(plugin.app);
+	return {
+		globalFilter: plugin.settings.tasksGlobalFilter.trim() || auto?.globalFilter || "",
+		dataview: auto?.dataview ?? false,
+	};
 }
 
 async function saveTagResult(plugin: MyMobilePlugin, result: TagPickResult): Promise<void> {
