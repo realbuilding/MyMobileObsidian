@@ -17,28 +17,33 @@ export const QUICK_ADD_TASK_CSS = `
 .mmo-has-quick-add {
 	position: relative;
 }
-.${BUTTON_CLS} {
+/* 选择器加上 .view-content > button 提高优先级，避免被主题/移动端按钮样式覆盖 */
+.view-content > button.${BUTTON_CLS} {
 	position: absolute;
 	right: 20px;
-	bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+	/* 移动端底部导航栏是悬浮在内容上方的，距离由设置项控制 */
+	bottom: calc(var(--mmo-quick-add-bottom, 24px) + env(safe-area-inset-bottom, 0px));
 	z-index: var(--layer-cover, 5);
-	width: 48px;
-	height: 48px;
+	width: 52px;
+	height: 52px;
 	padding: 0;
+	border: none;
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent);
-	box-shadow: var(--shadow-l);
+	background-color: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+	box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
-.${BUTTON_CLS} svg {
-	width: 24px;
-	height: 24px;
+.view-content > button.${BUTTON_CLS} svg {
+	width: 26px;
+	height: 26px;
+	stroke-width: 2;
 }
-.${BUTTON_CLS}:hover {
-	background-color: var(--interactive-accent-hover);
+.view-content > button.${BUTTON_CLS}:hover,
+.view-content > button.${BUTTON_CLS}:active {
+	background-color: var(--interactive-accent-hover) !important;
 }
 
 /* 标签选择弹窗 */
@@ -140,12 +145,12 @@ function getTasksApi(plugin: MyMobilePlugin): TasksApiV1 | null {
 
 /** 根据设置为每个 Markdown 视图添加或移除悬浮按钮 */
 export function refreshQuickAddButtons(plugin: MyMobilePlugin): void {
-	const { quickAddEnabled, quickAddNotes } = plugin.settings;
+	const { quickAddEnabled, quickAddNotes, quickAddButtonBottom } = plugin.settings;
 	plugin.app.workspace.iterateAllLeaves((leaf) => {
 		if (!(leaf.view instanceof MarkdownView)) return;
 		const view = leaf.view;
 		const container = view.contentEl;
-		const existing = container.querySelector(`:scope > .${BUTTON_CLS}`);
+		const existing = container.querySelector<HTMLElement>(`:scope > .${BUTTON_CLS}`);
 		const want = quickAddEnabled && !!view.file && quickAddNotes.includes(view.file.path);
 
 		if (want && !existing) {
@@ -154,11 +159,16 @@ export function refreshQuickAddButtons(plugin: MyMobilePlugin): void {
 				cls: BUTTON_CLS,
 				attr: { "aria-label": "快速添加任务" },
 			});
-			setIcon(btn, "plus");
+			btn.style.setProperty("--mmo-quick-add-bottom", `${quickAddButtonBottom}px`);
+			// 用“待办清单”图标，避免和新建笔记的加号混淆；旧版本图标库缺失时退回到复选框
+			setIcon(btn, "list-todo");
+			if (!btn.querySelector("svg")) setIcon(btn, "check-square");
 			btn.addEventListener("click", (e) => {
 				e.preventDefault();
 				void quickAddTask(plugin);
 			});
+		} else if (want && existing) {
+			existing.style.setProperty("--mmo-quick-add-bottom", `${quickAddButtonBottom}px`);
 		} else if (!want && existing) {
 			existing.remove();
 			container.removeClass("mmo-has-quick-add");

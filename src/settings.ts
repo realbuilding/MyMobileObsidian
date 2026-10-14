@@ -11,6 +11,8 @@ export interface MyMobileSettings {
 	quickAddEnabled: boolean;
 	/** 显示悬浮“添加任务”按钮的笔记路径 */
 	quickAddNotes: string[];
+	/** 悬浮按钮距底部距离（px），用于避开移动端底部导航栏 */
+	quickAddButtonBottom: number;
 	/** 快速添加的任务写入的笔记路径 */
 	quickAddTargetPath: string;
 	quickAddTagPicker: boolean;
@@ -25,6 +27,7 @@ export const DEFAULT_SETTINGS: MyMobileSettings = {
 	tasksClean: true,
 	quickAddEnabled: true,
 	quickAddNotes: [],
+	quickAddButtonBottom: 110,
 	quickAddTargetPath: "Inbox/Tasks Inbox.md",
 	quickAddTagPicker: true,
 	commonTags: [],
@@ -105,6 +108,20 @@ export class MyMobileSettingTab extends PluginSettingTab {
 					s.quickAddEnabled = v;
 					await this.plugin.saveSettings();
 				})
+			);
+
+		new Setting(containerEl)
+			.setName("按钮距底部距离")
+			.setDesc("单位 px。按钮被底部导航栏挡住时调大")
+			.addSlider((sl) =>
+				sl
+					.setLimits(0, 300, 2)
+					.setValue(s.quickAddButtonBottom)
+					.setDynamicTooltip()
+					.onChange(async (v) => {
+						s.quickAddButtonBottom = v;
+						await this.plugin.saveSettings();
+					})
 			);
 
 		new Setting(containerEl)
