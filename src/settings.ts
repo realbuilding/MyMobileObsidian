@@ -15,6 +15,11 @@ export interface MyMobileSettings {
 	quickAddButtonBottom: number;
 	/** 快速添加的任务写入的笔记路径 */
 	quickAddTargetPath: string;
+	/** 新建任务使用的面板：自定义弹窗或 Tasks 原生面板 */
+	quickAddPanel: "custom" | "tasks";
+	quickAddCreatedDate: boolean;
+	/** 手动指定的 Tasks 全局过滤器；留空则自动读取 Tasks 设置 */
+	tasksGlobalFilter: string;
 	quickAddTagPicker: boolean;
 	commonTags: string[];
 	saveNewTagsToCommon: boolean;
@@ -29,6 +34,9 @@ export const DEFAULT_SETTINGS: MyMobileSettings = {
 	quickAddNotes: [],
 	quickAddButtonBottom: 110,
 	quickAddTargetPath: "Inbox/Tasks Inbox.md",
+	quickAddPanel: "custom",
+	quickAddCreatedDate: true,
+	tasksGlobalFilter: "",
 	quickAddTagPicker: true,
 	commonTags: [],
 	saveNewTagsToCommon: true,
@@ -102,7 +110,7 @@ export class MyMobileSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("启用悬浮按钮")
-			.setDesc("在下方指定的笔记右下角显示“+”按钮，点击后打开 Tasks 新建任务弹窗。也可使用命令「快速添加任务」")
+			.setDesc("在下方指定的笔记右下角显示“+”按钮，点击后打开新建任务弹窗。也可使用命令「快速添加任务」")
 			.addToggle((t) =>
 				t.setValue(s.quickAddEnabled).onChange(async (v) => {
 					s.quickAddEnabled = v;
@@ -166,8 +174,45 @@ export class MyMobileSettingTab extends PluginSettingTab {
 			.setClass("mmo-setting-indent");
 
 		new Setting(containerEl)
-			.setName("添加后选择标签")
-			.setDesc("Tasks 弹窗确认后，再弹出标签选择")
+			.setName("新建面板")
+			.setDesc("自定义面板支持快捷选择优先级、日期和标签；也可改用 Tasks 原生面板")
+			.addDropdown((d) =>
+				d
+					.addOption("custom", "自定义面板")
+					.addOption("tasks", "Tasks 原生面板")
+					.setValue(s.quickAddPanel)
+					.onChange(async (v) => {
+						s.quickAddPanel = v === "tasks" ? "tasks" : "custom";
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("自动写入创建日期")
+			.setDesc("自定义面板新建任务时添加 ➕ 创建日期")
+			.addToggle((t) =>
+				t.setValue(s.quickAddCreatedDate).onChange(async (v) => {
+					s.quickAddCreatedDate = v;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName("Tasks 全局过滤器")
+			.setDesc("留空则自动读取 Tasks 插件的设置；读取不到时在此手动填写")
+			.addText((t) =>
+				t
+					.setPlaceholder("自动读取")
+					.setValue(s.tasksGlobalFilter)
+					.onChange(async (v) => {
+						s.tasksGlobalFilter = v.trim();
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Tasks 原生面板后选择标签")
+			.setDesc("使用 Tasks 原生面板时，确认后再弹出标签选择")
 			.addToggle((t) =>
 				t.setValue(s.quickAddTagPicker).onChange(async (v) => {
 					s.quickAddTagPicker = v;
@@ -191,7 +236,7 @@ export class MyMobileSettingTab extends PluginSettingTab {
 		if (s.commonTags.length === 0) {
 			tagsEl.createSpan({ cls: "mmo-tag-empty", text: "尚未设置常用标签" });
 		}
-		for (const tag of s.commonTags) tagsEl.createSpan({ cls: "mmo-tag-chip", text: tag });
+		for (const tag of s.commonTags) tagsEl.createSpan({ cls: "mmo-chip", text: tag });
 
 		new Setting(containerEl)
 			.setName("新标签保存为常用")

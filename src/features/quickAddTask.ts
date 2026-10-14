@@ -1,12 +1,15 @@
 /* 快速添加任务
    - 在指定笔记右下角显示悬浮“+”按钮（也提供命令，可绑定到移动端工具栏）
-   - 点击后调用 Tasks 插件自带的新建任务弹窗，再弹出标签选择
+   - 点击后打开自定义的新建任务弹窗（也可切换为 Tasks 插件自带的弹窗 + 标签选择）
    - 任务追加到单独的“任务存储笔记”，避免与汇总笔记中的 Tasks 查询结果重复
 */
 
 import { MarkdownView, Notice, TFile, normalizePath, setIcon } from "obsidian";
 import type MyMobilePlugin from "../main";
 import { TagPickerModal } from "../ui/tagPickerModal";
+import type { TagPickResult } from "../ui/tagField";
+import { TaskCreateModal } from "../ui/taskCreateModal";
+import { buildTaskLine, readTasksFormat } from "../utils/taskLine";
 import { insertTagsIntoTaskLine } from "../utils/tags";
 
 export const QUICK_ADD_TASK_ID = "mmo-quick-add-task";
@@ -47,13 +50,13 @@ export const QUICK_ADD_TASK_CSS = `
 }
 
 /* 标签选择弹窗 */
-.mmo-tag-chips {
+.mmo-chips {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 8px;
 	margin-bottom: 12px;
 }
-.mmo-tag-chip {
+.mmo-chip {
 	border-radius: 999px;
 	padding: 4px 12px;
 	height: auto;
@@ -63,7 +66,7 @@ export const QUICK_ADD_TASK_CSS = `
 	box-shadow: none;
 	border: 1px solid var(--background-modifier-border);
 }
-.mmo-tag-chip.is-selected {
+.mmo-chip.is-selected {
 	background-color: var(--interactive-accent);
 	color: var(--text-on-accent);
 	border-color: var(--interactive-accent);
@@ -80,6 +83,111 @@ export const QUICK_ADD_TASK_CSS = `
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 	padding: 8px 0;
+}
+
+.mmo-tag-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 8px;
+}
+.mmo-inline-check {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+}
+.mmo-link-btn {
+	background: none !important;
+	box-shadow: none !important;
+	border: none;
+	padding: 0 4px;
+	height: auto;
+	color: var(--text-accent);
+	font-size: var(--font-ui-small);
+	cursor: pointer;
+}
+
+/* 新建任务弹窗 */
+.mmo-task-desc {
+	width: 100%;
+	resize: vertical;
+	font-size: var(--font-ui-medium);
+}
+.mmo-section-title {
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	color: var(--text-muted);
+	margin: 14px 0 6px;
+}
+.mmo-segment {
+	flex-wrap: nowrap;
+	gap: 4px;
+	margin-bottom: 0;
+}
+.mmo-segment .mmo-chip {
+	flex: 1;
+	padding: 4px 0;
+	justify-content: center;
+}
+.mmo-chip.mmo-prio-highest.is-selected { background-color: #c62828; border-color: #c62828; color: #fff; }
+.mmo-chip.mmo-prio-high.is-selected { background-color: #ef5350; border-color: #ef5350; color: #fff; }
+.mmo-chip.mmo-prio-medium.is-selected { background-color: #ff9800; border-color: #ff9800; color: #fff; }
+.mmo-chip.mmo-prio-low.is-selected { background-color: #78909c; border-color: #78909c; color: #fff; }
+.mmo-chip.mmo-prio-lowest.is-selected { background-color: #b0bec5; border-color: #b0bec5; color: #fff; }
+.mmo-date-pick {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+}
+/* 透明的原生日期输入覆盖在 chip 上，点击即调出系统日历 */
+.mmo-date-pick input[type="date"] {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	opacity: 0;
+	padding: 0;
+	border: none;
+}
+.mmo-date-hint {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--font-ui-small);
+	color: var(--text-normal);
+	margin-top: -4px;
+}
+.mmo-date-hint.is-empty {
+	color: var(--text-faint);
+}
+.mmo-more {
+	margin-top: 14px;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 10px;
+}
+.mmo-more summary {
+	font-size: var(--font-ui-small);
+	color: var(--text-muted);
+	cursor: pointer;
+}
+.mmo-rec-row {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+.mmo-rec-row input {
+	flex: 1;
+	min-width: 0;
+}
+.mmo-task-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 18px;
 }
 
 /* 全部标签搜索多选弹窗 */
@@ -128,7 +236,7 @@ export const QUICK_ADD_TASK_CSS = `
 	gap: 6px;
 	padding: 0 0 12px;
 }
-.mmo-setting-tags .mmo-tag-chip {
+.mmo-setting-tags .mmo-chip {
 	cursor: default;
 }
 `;
@@ -181,8 +289,34 @@ export function removeQuickAddButtons(): void {
 	document.querySelectorAll(".mmo-has-quick-add").forEach((el) => el.removeClass("mmo-has-quick-add"));
 }
 
-/** 完整流程：Tasks 弹窗 → 标签选择 → 写入存储笔记 */
+/** 快速添加入口：按设置打开自定义弹窗或 Tasks 原生面板 */
 export async function quickAddTask(plugin: MyMobilePlugin): Promise<void> {
+	if (plugin.settings.quickAddPanel === "tasks") {
+		await quickAddViaTasks(plugin);
+		return;
+	}
+
+	const s = plugin.settings;
+	new TaskCreateModal(plugin.app, {
+		commonTags: s.commonTags,
+		saveNewToCommon: s.saveNewTagsToCommon,
+		addCreatedDate: s.quickAddCreatedDate,
+		onUseTasksPanel: () => void quickAddViaTasks(plugin),
+		onSubmit: async ({ fields, tagResult }) => {
+			const auto = await readTasksFormat(plugin.app);
+			const globalFilter = s.tasksGlobalFilter.trim() || auto?.globalFilter || "";
+			const line = buildTaskLine(
+				{ ...fields, tags: tagResult.tags },
+				{ globalFilter, dataview: auto?.dataview ?? false }
+			);
+			await saveTagResult(plugin, tagResult);
+			await writeTaskLine(plugin, line);
+		},
+	}).open();
+}
+
+/** Tasks 原生面板 → 标签选择 → 写入存储笔记 */
+async function quickAddViaTasks(plugin: MyMobilePlugin): Promise<void> {
 	const api = getTasksApi(plugin);
 	if (!api) {
 		new Notice("未检测到 Tasks 插件，请确认已安装并启用");
@@ -196,15 +330,22 @@ export async function quickAddTask(plugin: MyMobilePlugin): Promise<void> {
 	if (s.quickAddTagPicker) {
 		const result = await new TagPickerModal(plugin.app, s.commonTags, s.saveNewTagsToCommon).pick();
 		line = insertTagsIntoTaskLine(line, result.tags);
-
-		const newCommon = result.newCommonTags.filter((t) => !s.commonTags.includes(t));
-		if (newCommon.length > 0 || result.saveNewToCommon !== s.saveNewTagsToCommon) {
-			s.commonTags.push(...newCommon);
-			s.saveNewTagsToCommon = result.saveNewToCommon;
-			await plugin.saveSettings();
-		}
+		await saveTagResult(plugin, result);
 	}
+	await writeTaskLine(plugin, line);
+}
 
+async function saveTagResult(plugin: MyMobilePlugin, result: TagPickResult): Promise<void> {
+	const s = plugin.settings;
+	const newCommon = result.newCommonTags.filter((t) => !s.commonTags.includes(t));
+	if (newCommon.length > 0 || result.saveNewToCommon !== s.saveNewTagsToCommon) {
+		s.commonTags.push(...newCommon);
+		s.saveNewTagsToCommon = result.saveNewToCommon;
+		await plugin.saveSettings();
+	}
+}
+
+async function writeTaskLine(plugin: MyMobilePlugin, line: string): Promise<void> {
 	try {
 		const file = await appendLine(plugin, line);
 		new Notice(`已添加到 ${file.basename}`);
