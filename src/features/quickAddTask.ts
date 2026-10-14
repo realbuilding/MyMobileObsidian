@@ -174,6 +174,12 @@ export const QUICK_ADD_TASK_CSS = `
 	justify-content: space-between;
 	margin-top: 18px;
 }
+.mmo-task-footer .mmo-submit-btn {
+	height: auto;
+	padding: 8px 28px;
+	font-size: var(--font-ui-medium);
+	border-radius: var(--radius-m);
+}
 
 /* 全部标签搜索多选弹窗 */
 .mmo-tag-search {

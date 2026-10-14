@@ -245,7 +245,7 @@ export class TaskCreateModal extends Modal {
 		};
 		setPriority("none");
 
-		const due = new DatePill(this.app, pills, "截止日期", "📅", DUE_PRESETS);
+		const due = new DatePill(this.app, pills, "截止", "📅", DUE_PRESETS);
 
 		let recurrence = "";
 		let whenDone = false;
@@ -293,16 +293,16 @@ export class TaskCreateModal extends Modal {
 		};
 		setRecurrence("");
 
-		const scheduled = new DatePill(this.app, pills, "计划日期", "⏳", SCHEDULED_PRESETS);
+		const scheduled = new DatePill(this.app, pills, "计划", "⏳", SCHEDULED_PRESETS);
 
 		// 底部
 		const footer = contentEl.createDiv({ cls: "mmo-task-footer" });
-		const tasksBtn = footer.createEl("button", { cls: "mmo-link-btn", text: "用 Tasks 原生面板" });
+		const tasksBtn = footer.createEl("button", { cls: "mmo-link-btn", text: "原生面板" });
 		tasksBtn.addEventListener("click", () => {
 			this.close();
 			this.opts.onUseTasksPanel();
 		});
-		const submitBtn = footer.createEl("button", { cls: "mod-cta", text: "添加" });
+		const submitBtn = footer.createEl("button", { cls: "mod-cta mmo-submit-btn", text: "添加" });
 
 		const submit = async () => {
 			if (this.submitting) return;
