@@ -22,7 +22,6 @@ export interface MyMobileSettings {
 	tasksGlobalFilter: string;
 	quickAddTagPicker: boolean;
 	commonTags: string[];
-	saveNewTagsToCommon: boolean;
 }
 
 export const DEFAULT_SETTINGS: MyMobileSettings = {
@@ -39,7 +38,6 @@ export const DEFAULT_SETTINGS: MyMobileSettings = {
 	tasksGlobalFilter: "",
 	quickAddTagPicker: true,
 	commonTags: [],
-	saveNewTagsToCommon: true,
 };
 
 export class MyMobileSettingTab extends PluginSettingTab {
@@ -222,7 +220,7 @@ export class MyMobileSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("常用标签")
-			.setDesc("添加任务时只从这些标签中选择。点击「管理」搜索 Vault 中的全部标签并多选")
+			.setDesc("添加任务时只从这些标签中选择，新输入的标签会自动加入。点击「管理」搜索 Vault 中的全部标签并多选")
 			.addButton((b) =>
 				b.setButtonText("管理").onClick(() => {
 					new TagSelectModal(this.app, s.commonTags, async (tags) => {
@@ -237,15 +235,5 @@ export class MyMobileSettingTab extends PluginSettingTab {
 			tagsEl.createSpan({ cls: "mmo-tag-empty", text: "尚未设置常用标签" });
 		}
 		for (const tag of s.commonTags) tagsEl.createSpan({ cls: "mmo-chip", text: tag });
-
-		new Setting(containerEl)
-			.setName("新标签保存为常用")
-			.setDesc("添加任务时手动输入的新标签，默认同时加入常用标签（弹窗内也可临时切换）")
-			.addToggle((t) =>
-				t.setValue(s.saveNewTagsToCommon).onChange(async (v) => {
-					s.saveNewTagsToCommon = v;
-					await this.plugin.saveSettings();
-				})
-			);
 	}
 }

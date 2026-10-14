@@ -71,34 +71,12 @@ export const QUICK_ADD_TASK_CSS = `
 	color: var(--text-on-accent);
 	border-color: var(--interactive-accent);
 }
-.mmo-tag-add-row {
-	display: flex;
-	gap: 8px;
-}
-.mmo-tag-add-row input {
-	flex: 1;
-	min-width: 0;
-}
 .mmo-tag-empty {
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 	padding: 8px 0;
 }
 
-.mmo-tag-footer {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	margin-top: 8px;
-}
-.mmo-inline-check {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	font-size: var(--font-ui-small);
-	color: var(--text-muted);
-}
 .mmo-link-btn {
 	background: none !important;
 	box-shadow: none !important;
@@ -109,79 +87,86 @@ export const QUICK_ADD_TASK_CSS = `
 	font-size: var(--font-ui-small);
 	cursor: pointer;
 }
+.mmo-chip-ghost {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	background-color: transparent;
+	border-style: dashed;
+	color: var(--text-muted);
+}
+.mmo-chip-icon {
+	display: inline-flex;
+}
+.mmo-chip-icon svg {
+	width: 14px;
+	height: 14px;
+}
+.mmo-chip-input {
+	width: 9em;
+	height: auto;
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: var(--font-ui-small);
+}
 
 /* 新建任务弹窗 */
 .mmo-task-desc {
 	width: 100%;
 	resize: vertical;
 	font-size: var(--font-ui-medium);
+	margin-bottom: 12px;
 }
-.mmo-section-title {
-	font-size: var(--font-ui-small);
-	font-weight: 600;
-	color: var(--text-muted);
-	margin: 14px 0 6px;
+.mmo-pills {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	padding-top: 12px;
+	border-top: 1px solid var(--background-modifier-border);
 }
-.mmo-segment {
-	flex-wrap: nowrap;
-	gap: 4px;
-	margin-bottom: 0;
-}
-.mmo-segment .mmo-chip {
-	flex: 1;
-	padding: 4px 0;
-	justify-content: center;
-}
-.mmo-chip.mmo-prio-highest.is-selected { background-color: #c62828; border-color: #c62828; color: #fff; }
-.mmo-chip.mmo-prio-high.is-selected { background-color: #ef5350; border-color: #ef5350; color: #fff; }
-.mmo-chip.mmo-prio-medium.is-selected { background-color: #ff9800; border-color: #ff9800; color: #fff; }
-.mmo-chip.mmo-prio-low.is-selected { background-color: #78909c; border-color: #78909c; color: #fff; }
-.mmo-chip.mmo-prio-lowest.is-selected { background-color: #b0bec5; border-color: #b0bec5; color: #fff; }
-.mmo-date-pick {
-	position: relative;
+.mmo-pill {
 	display: inline-flex;
 	align-items: center;
-	cursor: pointer;
-}
-/* 透明的原生日期输入覆盖在 chip 上，点击即调出系统日历 */
-.mmo-date-pick input[type="date"] {
-	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
-	opacity: 0;
-	padding: 0;
-	border: none;
-}
-.mmo-date-hint {
-	display: flex;
-	align-items: center;
-	gap: 8px;
+	gap: 2px;
+	height: auto;
+	padding: 4px 8px 4px 12px;
+	border-radius: 999px;
 	font-size: var(--font-ui-small);
-	color: var(--text-normal);
-	margin-top: -4px;
-}
-.mmo-date-hint.is-empty {
-	color: var(--text-faint);
-}
-.mmo-more {
-	margin-top: 14px;
-	border-top: 1px solid var(--background-modifier-border);
-	padding-top: 10px;
-}
-.mmo-more summary {
-	font-size: var(--font-ui-small);
+	background-color: transparent;
+	border: 1px solid var(--background-modifier-border);
 	color: var(--text-muted);
-	cursor: pointer;
+	box-shadow: none;
+	white-space: nowrap;
 }
-.mmo-rec-row {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 6px;
+.mmo-pill.is-set {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
 }
-.mmo-rec-row input {
-	flex: 1;
-	min-width: 0;
+.mmo-pill-caret {
+	display: inline-flex;
+	opacity: 0.6;
+}
+.mmo-pill-caret svg {
+	width: 14px;
+	height: 14px;
+}
+.mmo-pill.mmo-prio-highest.is-set { border-color: #c62828; }
+.mmo-pill.mmo-prio-high.is-set { border-color: #ef5350; }
+.mmo-pill.mmo-prio-medium.is-set { border-color: #ff9800; }
+.mmo-pill.mmo-prio-low.is-set { border-color: #78909c; }
+.mmo-pill.mmo-prio-lowest.is-set { border-color: #b0bec5; }
+.mmo-hidden-date {
+	position: fixed;
+	left: 50%;
+	bottom: 0;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+.mmo-prompt-input {
+	width: 100%;
 }
 .mmo-task-footer {
 	display: flex;
@@ -300,7 +285,6 @@ export async function quickAddTask(plugin: MyMobilePlugin): Promise<void> {
 	const { globalFilter, dataview } = await resolveTasksFormat(plugin);
 	new TaskCreateModal(plugin.app, {
 		commonTags: s.commonTags,
-		saveNewToCommon: s.saveNewTagsToCommon,
 		addCreatedDate: s.quickAddCreatedDate,
 		tagPrefix: tagFilterName(globalFilter),
 		onUseTasksPanel: () => void quickAddViaTasks(plugin),
@@ -329,7 +313,6 @@ async function quickAddViaTasks(plugin: MyMobilePlugin): Promise<void> {
 		const result = await new TagPickerModal(
 			plugin.app,
 			s.commonTags,
-			s.saveNewTagsToCommon,
 			tagFilterName(globalFilter)
 		).pick();
 		line = insertTagsIntoTaskLine(line, result.tags);
@@ -347,14 +330,13 @@ async function resolveTasksFormat(plugin: MyMobilePlugin): Promise<{ globalFilte
 	};
 }
 
+/** 新输入的标签默认加入常用标签 */
 async function saveTagResult(plugin: MyMobilePlugin, result: TagPickResult): Promise<void> {
 	const s = plugin.settings;
-	const newCommon = result.newCommonTags.filter((t) => !s.commonTags.includes(t));
-	if (newCommon.length > 0 || result.saveNewToCommon !== s.saveNewTagsToCommon) {
-		s.commonTags.push(...newCommon);
-		s.saveNewTagsToCommon = result.saveNewToCommon;
-		await plugin.saveSettings();
-	}
+	const newCommon = result.newTags.filter((t) => !s.commonTags.includes(t));
+	if (newCommon.length === 0) return;
+	s.commonTags.push(...newCommon);
+	await plugin.saveSettings();
 }
 
 async function writeTaskLine(plugin: MyMobilePlugin, line: string): Promise<void> {

@@ -6,12 +6,7 @@ export class TagPickerModal extends Modal {
 	private field!: TagField;
 	private resolve!: (r: TagPickResult) => void;
 
-	constructor(
-		app: App,
-		private commonTags: string[],
-		private saveNewToCommon: boolean,
-		private tagPrefix: string | null = null
-	) {
+	constructor(app: App, private commonTags: string[], private tagPrefix: string | null = null) {
 		super(app);
 	}
 
@@ -26,7 +21,7 @@ export class TagPickerModal extends Modal {
 	onOpen(): void {
 		this.modalEl.addClass("mmo-tag-picker-modal");
 		this.titleEl.setText("选择标签");
-		this.field = new TagField(this.app, this.contentEl, this.commonTags, this.saveNewToCommon, this.tagPrefix);
+		this.field = new TagField(this.app, this.contentEl, this.commonTags, this.tagPrefix);
 		new Setting(this.contentEl).addButton((b) => b.setButtonText("完成").setCta().onClick(() => this.close()));
 	}
 

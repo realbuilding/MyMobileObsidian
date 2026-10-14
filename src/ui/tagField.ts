@@ -1,22 +1,19 @@
-import { App } from "obsidian";
+import { App, setIcon } from "obsidian";
 import { normalizeTag, tagLabel } from "../utils/tags";
 import { TagSelectModal } from "./tagSelectModal";
 
 export interface TagPickResult {
 	/** 本次选中的标签 */
 	tags: string[];
-	/** 需要追加到常用标签的新标签 */
-	newCommonTags: string[];
-	/** “新标签保存为常用”开关的最终状态 */
-	saveNewToCommon: boolean;
+	/** 本次新输入的标签，默认加入常用标签 */
+	newTags: string[];
 }
 
-/** 标签选择区域：常用标签 chip 多选 + 新标签输入 + 搜索全部标签 */
+/** 标签选择区域：常用标签 chip 多选，末尾是“添加”和“搜索全部标签”小按钮 */
 export class TagField {
 	private options: string[];
 	private selected = new Set<string>();
 	private newTags = new Set<string>();
-	private saveNewToCommon: boolean;
 	private chipsEl: HTMLElement;
 
 	/**
@@ -26,77 +23,20 @@ export class TagField {
 		private app: App,
 		parent: HTMLElement,
 		commonTags: string[],
-		saveNewToCommon: boolean,
 		private tagPrefix: string | null = null
 	) {
 		this.options = [...commonTags];
-		this.saveNewToCommon = saveNewToCommon;
-
 		this.chipsEl = parent.createDiv({ cls: "mmo-chips" });
-		this.renderChips();
-
-		const addRow = parent.createDiv({ cls: "mmo-tag-add-row" });
-		const input = addRow.createEl("input", {
-			type: "text",
-			attr: { placeholder: tagPrefix ? `新标签（自动加 #${tagPrefix}/ 前缀）` : "新标签，回车添加" },
-		});
-		const addBtn = addRow.createEl("button", { text: "添加" });
-		const add = () => {
-			const tag = normalizeTag(input.value, this.tagPrefix);
-			input.value = "";
-			if (!tag) return;
-			if (!this.options.includes(tag)) {
-				this.options.push(tag);
-				this.newTags.add(tag);
-			}
-			this.selected.add(tag);
-			this.renderChips();
-		};
-		input.addEventListener("keydown", (e) => {
-			if (e.key === "Enter" && !e.isComposing) {
-				e.preventDefault();
-				e.stopPropagation();
-				add();
-			}
-		});
-		addBtn.addEventListener("click", add);
-
-		const footer = parent.createDiv({ cls: "mmo-tag-footer" });
-		const saveLabel = footer.createEl("label", { cls: "mmo-inline-check" });
-		const saveCb = saveLabel.createEl("input", { type: "checkbox" });
-		saveCb.checked = this.saveNewToCommon;
-		saveLabel.appendText("新标签保存为常用");
-		saveCb.addEventListener("change", () => (this.saveNewToCommon = saveCb.checked));
-
-		const searchBtn = footer.createEl("button", { cls: "mmo-link-btn", text: "搜索全部标签" });
-		searchBtn.addEventListener("click", () => {
-			new TagSelectModal(this.app, [...this.selected], (tags) => {
-				this.selected = new Set(tags);
-				// 从全部标签中选的只用于本次，不自动加入常用
-				for (const t of tags) if (!this.options.includes(t)) this.options.push(t);
-				this.renderChips();
-			}, "确定").open();
-		});
+		this.render();
 	}
 
 	getResult(): TagPickResult {
 		const tags = this.options.filter((t) => this.selected.has(t));
-		return {
-			tags,
-			newCommonTags: this.saveNewToCommon ? tags.filter((t) => this.newTags.has(t)) : [],
-			saveNewToCommon: this.saveNewToCommon,
-		};
+		return { tags, newTags: tags.filter((t) => this.newTags.has(t)) };
 	}
 
-	private renderChips(): void {
+	private render(): void {
 		this.chipsEl.empty();
-		if (this.options.length === 0) {
-			this.chipsEl.createDiv({
-				cls: "mmo-tag-empty",
-				text: "还没有常用标签，可在插件设置中配置，或在下方输入新标签",
-			});
-			return;
-		}
 		for (const tag of this.options) {
 			const chip = this.chipsEl.createEl("button", {
 				cls: "mmo-chip",
@@ -110,5 +50,66 @@ export class TagField {
 				chip.toggleClass("is-selected", this.selected.has(tag));
 			});
 		}
+
+		const addBtn = this.chipsEl.createEl("button", {
+			cls: "mmo-chip mmo-chip-ghost",
+			attr: { "aria-label": "添加标签" },
+		});
+		setIcon(addBtn.createSpan({ cls: "mmo-chip-icon" }), "plus");
+		addBtn.appendText("添加");
+		addBtn.addEventListener("click", () => this.showInput(addBtn));
+
+		const searchBtn = this.chipsEl.createEl("button", {
+			cls: "mmo-chip mmo-chip-ghost",
+			attr: { "aria-label": "搜索全部标签" },
+		});
+		setIcon(searchBtn.createSpan({ cls: "mmo-chip-icon" }), "search");
+		searchBtn.addEventListener("click", () => {
+			new TagSelectModal(this.app, [...this.selected], (tags) => {
+				this.selected = new Set(tags);
+				// 从全部标签中选的只用于本次，不自动加入常用
+				for (const t of tags) if (!this.options.includes(t)) this.options.push(t);
+				this.render();
+			}, "确定").open();
+		});
+	}
+
+	/** 把“添加”按钮替换为行内输入框；回车添加，失焦或 Esc 取消 */
+	private showInput(addBtn: HTMLElement): void {
+		const input = createEl("input", {
+			type: "text",
+			cls: "mmo-chip-input",
+			attr: { placeholder: this.tagPrefix ? `#${this.tagPrefix}/…` : "新标签" },
+		});
+		addBtn.replaceWith(input);
+		input.focus();
+
+		let done = false;
+		const finish = (commit: boolean) => {
+			if (done) return;
+			done = true;
+			const tag = commit ? normalizeTag(input.value, this.tagPrefix) : null;
+			if (tag) {
+				if (!this.options.includes(tag)) {
+					this.options.push(tag);
+					this.newTags.add(tag);
+				}
+				this.selected.add(tag);
+			}
+			this.render();
+		};
+		input.addEventListener("keydown", (e) => {
+			if (e.isComposing) return;
+			if (e.key === "Enter") {
+				e.preventDefault();
+				e.stopPropagation();
+				finish(true);
+			} else if (e.key === "Escape") {
+				e.preventDefault();
+				e.stopPropagation();
+				finish(false);
+			}
+		});
+		input.addEventListener("blur", () => finish(true));
 	}
 }
