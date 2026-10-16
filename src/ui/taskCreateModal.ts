@@ -1,4 +1,4 @@
-import { App, Menu, Modal, Notice, Setting, moment, setIcon } from "obsidian";
+import { App, Menu, Modal, Notice, Platform, Setting, moment, setIcon } from "obsidian";
 import { TagField, TagPickResult } from "./tagField";
 import { PRIORITY_OPTIONS, Priority, TaskFields } from "../utils/taskLine";
 
@@ -109,8 +109,15 @@ class PromptModal extends Modal {
 	}
 }
 
-/** 调出系统日期选择器；不支持 showPicker 时退回到带日期输入框的弹窗 */
+/**
+ * 调出系统日期选择器；不支持 showPicker 时退回到带日期输入框的弹窗。
+ * Android WebView 在菜单回调里调用 showPicker 会静默失败（不抛异常），直接走弹窗
+ */
 function pickDate(app: App, initial: string | null, onPick: (v: string) => void): void {
+	if (Platform.isAndroidApp) {
+		new DateModal(app, initial, onPick).open();
+		return;
+	}
 	const input = document.body.createEl("input", { type: "date", cls: "mmo-hidden-date" });
 	input.value = initial ?? "";
 	const cleanup = () => window.setTimeout(() => input.remove(), 0);
@@ -137,6 +144,12 @@ class DateModal extends Modal {
 		this.titleEl.setText("选择日期");
 		const input = this.contentEl.createEl("input", { type: "date", cls: "mmo-prompt-input" });
 		input.value = this.initial ?? "";
+		// 系统选择器点"确定"后直接回填，省去再点一次按钮
+		input.addEventListener("change", () => {
+			if (!input.value) return;
+			this.onPick(input.value);
+			this.close();
+		});
 		new Setting(this.contentEl).addButton((b) =>
 			b.setButtonText("确定").setCta().onClick(() => {
 				if (input.value) this.onPick(input.value);
